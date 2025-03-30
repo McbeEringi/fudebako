@@ -28,3 +28,24 @@ fdbk-menu
 ```
 
 to show desktop apps
+
+## Nix
+### run
+Run without installing.
+```sh
+nix run github:McbeEringi/fudebako#
+```
+
+### development
+You can launch a development shell with gjs etc. prepared using the following command.
+```sh
+nix develop
+```
+example
+```sh
+$ ./fdbk-menu # failed
+/usr/bin/env: 'gjs': No such file or directory
+$ nix develop
+$ ./fdbk-menu # success
+```
+
