@@ -64,7 +64,7 @@ drun=({
 		}
 	}
 )),
-bench=(n=100000)=>(
+bench=(n=10000)=>(
 	n=[...Array(n)].map(_=>(_=Math.random().toFixed(6),{txt:_,keywords:{1:[_]}})),
 	console.log('rand done'),
 	n
@@ -91,6 +91,7 @@ main=({
 			}),
 			sinp=new Gtk.SearchEntry({search_delay:50,hexpand:true}),
 			sbtn=new Gtk.ToggleButton({icon_name:'system-search-symbolic'}),
+			spn=new Gtk.Spinner({spinning:true}),
 			sbar=new Gtk.SearchBar({key_capture_widget:win,child:sinp}),
 			ul=new Gtk.FlowBox({
 				max_children_per_line:1,
@@ -118,9 +119,13 @@ main=({
 						w.p
 					)),
 					incremental:true,
-					model:items.reduce((a,x,i)=>(
-						a.append(Object.assign(new GObject.Object,{x,i})),a
-					),new Gio.ListStore),
+					model:(w=>(
+						GLib.idle_add(
+							GLib.PRIORITY_DEFAULT_IDLE,
+							_=>items.forEach((x,i)=>w.append(Object.assign(new GObject.Object,{x,i})))
+						),
+						w
+					))(new Gio.ListStore)
 				})
 			}),
 		)=>(
@@ -138,7 +143,7 @@ main=({
 					box.append(x)
 				))(x.icon),
 				box.append(new Gtk.Label({label:x.txt})),
-				box.append(new Gtk.Label({hexpand:true,xalign:1,label:p+''})),
+				// box.append(new Gtk.Label({hexpand:true,xalign:1,label:p+''})),
 				x.menu&&(li.tooltip_text=x.menu.map(x=>x.txt).join('\n')),
 				Object.assign(li,{x,i,p}),
 				li.connect('activate',_=>li.p&&(x.exec(win)||win.close())),
@@ -149,15 +154,18 @@ main=({
 			)),
 			sinp.connect('activate',w=>(w=ul.get_child_at_index(0))&&w.p&&(w.x.exec(win)||win.close())),
 
-			// sinp.add_controller(esc()),
+			lm.connect('notify::pending',w=>spn.spinning=!!w.pending),
+			sinp.add_controller(esc()),// BUG: hiding search bar by esc key causes high load. GTK bug?
 			sbtn.bind_property('active',sbar,'search-mode-enabled',GObject.BindingFlags.BIDIRECTIONAL),
 
 			hbar.pack_start(sbtn),
+			hbar.pack_start(spn),
 
 			box.append(sbar),
 			box.append(scr),
 
 			win.add_controller(esc()),
+			win.connect('close-request',_=>lm.model=null),
 			win.present(),
 			0
 		))()
