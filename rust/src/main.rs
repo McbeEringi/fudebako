@@ -11,7 +11,7 @@ fn on_activate(app: &gtk::Application) {
 		.application(app)
 		.child(&button)
 		.build();
-	button.connect_clicked(glib::clone!(@weak window => move |_| window.close()));
+	button.connect_clicked(glib::clone!(#[weak] window, move |_|window.close()));
 	window.present();
 }
 
