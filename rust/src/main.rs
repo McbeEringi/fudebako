@@ -1,8 +1,6 @@
 use gtk4 as gtk;
 use gtk::prelude::*;
-use gtk::glib;
-use gtk::gio;
-use gtk::gdk;
+use gtk::{glib,gio,gdk};
 
 fn on_activate(app: &gtk::Application){
 	let vbox=gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
@@ -19,7 +17,8 @@ fn on_activate(app: &gtk::Application){
 		.valign(gtk::Align::Start)
 		.build();
 	let scr=gtk::ScrolledWindow::builder().vexpand(true).child(&ul).build();
-	let esc=||(|e: gtk::EventControllerKey|{
+	let esc=||{
+		let e=gtk::EventControllerKey::new();
 		e.connect_key_pressed(|_,key,_,_|{
 			match key{
 				gdk::Key::Escape=>std::process::exit(0),
@@ -28,7 +27,7 @@ fn on_activate(app: &gtk::Application){
 			glib::Propagation::Proceed
 		});
 		e
-	})(gtk::EventControllerKey::new());
+	};
 
 	sbtn
 		.bind_property("active",&sbar,"search-mode-enabled")
