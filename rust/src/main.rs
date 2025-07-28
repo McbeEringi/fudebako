@@ -4,6 +4,53 @@ use gtk::{glib,gio,gdk};
 use gtk4_layer_shell::{KeyboardMode,LayerShell};
 // use num_traits::sign::signum;
 
+// https://github.com/gtk-rs/gtk4-rs/tree/main/book/listings/list_widgets/2/integer_object
+mod integer_object{
+	mod imp{
+		use gtk4 as gtk;
+		use std::cell::Cell;
+
+		use glib::Properties;
+		use gtk::glib;
+		use gtk::prelude::*;
+		use gtk::subclass::prelude::*;
+
+		// ANCHOR: integer_object
+		// Object holding the state
+		#[derive(Properties,Default)]
+		#[properties(wrapper_type=super::IntegerObject)]
+		pub struct IntegerObject{
+				#[property(get,set)]
+				number:Cell<i32>,
+		}
+		// ANCHOR_END: integer_object
+
+		// The central trait for subclassing a GObject
+		#[glib::object_subclass]
+		impl ObjectSubclass for IntegerObject{
+				const NAME:&'static str="MyGtkAppIntegerObject";
+				type Type=super::IntegerObject;
+		}
+
+		// ANCHOR: object_impl
+		// Trait shared by all GObjects
+		#[glib::derived_properties]
+		impl ObjectImpl for IntegerObject{}
+	}
+
+	use gtk4 as gtk;
+	use glib::Object;
+	use gtk::glib;
+
+	// ANCHOR: integer_object
+	glib::wrapper!{pub struct IntegerObject(ObjectSubclass<imp::IntegerObject>);}
+	impl IntegerObject{
+		pub fn new(number:i32)->Self{Object::builder().property("number", number).build()}
+	}
+}
+
+
+
 fn menu(app:&gtk::Application,model:gio::ListStore){
 	let vbox=gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
 	let hbar=gtk::HeaderBar::new();
