@@ -4,7 +4,7 @@ use gtk::{glib,gio,gdk};
 use gtk4_layer_shell::{KeyboardMode,LayerShell};
 // use num_traits::sign::signum;
 
-fn on_activate(app:&gtk::Application){
+fn menu(app:&gtk::Application,model:gio::ListStore){
 	let vbox=gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
 	let hbar=gtk::HeaderBar::new();
 	let win=gtk::ApplicationWindow::builder()
@@ -14,20 +14,28 @@ fn on_activate(app:&gtk::Application){
 	let sbtn=gtk::ToggleButton::builder().icon_name("system-search-symbolic").build();
 	let spn=gtk::Spinner::builder().spinning(true).build();
 	let sbar=gtk::SearchBar::builder().key_capture_widget(&win).child(&sinp).build();
+	let filter=gtk::CustomFilter::new(|_x|true);
+	let sorter=gtk::CustomSorter::new(|_a,_b|gtk::Ordering::Equal);
 	let ul=gtk::ListView::builder()
 		.model(&(
-			gtk::SingleSelection::new(Some(
-				// gtk::StringList::new(&vec!["apple", "banana", "cherry", "date"]).clone()
-					(||->gtk::StringList{(0..=100_000).map(|number| number.to_string()).collect()})()
+			gtk::SingleSelection::new(Some(gtk::SortListModel::builder()
+				.incremental(true).sorter(&sorter)
+				.model(&gtk::FilterListModel::builder()
+					.incremental(true).filter(&filter)
+					.model(&model).build()
+				).build()
 			))
 		))
 		.factory(&(||{
 			let factory=gtk::SignalListItemFactory::new();
 			factory.connect_setup(move|_,x|{
-				let hbox=gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
-				// let img=gtk::Image::builder().gicon();
+				let hbox=gtk::Box::builder().orientation(gtk::Orientation::Horizontal).build();
+				let img=gtk::Image::builder()
+					.gicon(&gio::Icon::for_string("application-x-executable").unwrap())
+					.icon_size(gtk::IconSize::Large).build();
 				let pic=gtk::Picture::builder().height_request(128).build();
 				let txt=gtk::Label::new(None);
+				hbox.append(&img);
 				hbox.append(&pic);
 				hbox.append(&txt);
 				x.downcast_ref::<gtk::ListItem>().expect("Needs to be ListItem")
@@ -36,9 +44,11 @@ fn on_activate(app:&gtk::Application){
 			factory.connect_bind(move|_,x|{
 				let li=x.downcast_ref::<gtk::ListItem>().expect("Needs to be ListItem");
 				let hbox=li.child().and_downcast::<gtk::Box>().expect("Needs to be Box");
-				let pic=hbox.first_child().and_downcast::<gtk::Picture>().expect("Needs to be Picture");
+				let img=hbox.first_child().and_downcast::<gtk::Image>().expect("Needs to be Image");
+				let pic=img.next_sibling().and_downcast::<gtk::Picture>().expect("Needs to be Picture");
 				let txt=pic.next_sibling().and_downcast::<gtk::Label>().expect("Needs to be Label");
 				let obj=li.item().and_downcast::<gtk::StringObject>().expect("Needs to be StringObject");
+				img.set_visible(false);
 				txt.set_text(&obj.string());
 			});
 			factory
@@ -60,20 +70,6 @@ fn on_activate(app:&gtk::Application){
 		e
 	};
 	// let lm=
-		// gtk::SortListModel::builder()
-		// .incremental(true)
-		// .sorter(&gtk::CustomSorter::new(|a,b|b.p-a.p))
-		// .model(
-		// 	gtk::FilterListModel::builder()
-		// 		.incremental(true)
-		// 		.filter(&gtk::CustomFilter::new())
-		// 		.model(
-					// gio::ListStore::new(
-					// )
-		// 		)
-		// 		.build()
-		// )
-		// .build();
 
 
 	sbtn
@@ -87,6 +83,18 @@ fn on_activate(app:&gtk::Application){
 	win.init_layer_shell();
 	win.set_keyboard_mode(KeyboardMode::Exclusive);
 	win.present();
+}
+
+fn on_activate(app:&gtk::Application){
+				// gtk::StringList::new(&vec!["apple", "banana", "cherry", "date"]).clone()
+				// (||->gtk::StringList{(0..=100_000).map(|number| number.to_string()).collect()})()
+	menu(
+		app,
+		(||->gio::ListStore{
+			let w=gio::ListStore::new::<glib::BoxedAnyObject>();
+			w
+		})()
+	);
 }
 
 fn main(){
