@@ -69,8 +69,6 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 		});
 		e
 	};
-	// let lm=
-
 
 	sbtn
 		.bind_property("active",&sbar,"search-mode-enabled")
@@ -86,8 +84,8 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 }
 
 fn on_activate(app:&gtk::Application){
-				// gtk::StringList::new(&vec!["apple", "banana", "cherry", "date"]).clone()
-				// (||->gtk::StringList{(0..=100_000).map(|number| number.to_string()).collect()})()
+	// gtk::StringList::new(&vec!["apple", "banana", "cherry", "date"]).clone()
+	// (||->gtk::StringList{(0..=100_000).map(|number| number.to_string()).collect()})()
 	menu(
 		app,
 		(||->gio::ListStore{
