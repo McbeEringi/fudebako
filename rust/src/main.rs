@@ -41,12 +41,11 @@ mod fdbk_object{
 	}
 
 	use gtk4 as gtk;
-	use glib::Object;
 	use gtk::{glib,gio};
 
 	glib::wrapper!{pub struct FDBKObject(ObjectSubclass<imp::FDBKObject>);}
 	impl FDBKObject{
-		pub fn new(txt:&str)->Self{Object::builder().property("txt", txt).build()}
+		pub fn new(txt:&str)->Self{glib::Object::builder().property("txt", txt).build()}
 		pub fn builder()->FDBKObjectBuilder{FDBKObjectBuilder::default()}
 	}
 
@@ -171,7 +170,7 @@ fn on_activate(app:&gtk::Application){
 		// 	w.append(&FDBKObject::builder().txt("ListView").build());
 		// 	w
 		// })()
-		gio::AppInfo::all().iter().fold(gio::ListStore::new::<FDBKObject>(),|a,x|{
+		gio::AppInfo::all().iter().filter(|x|x.should_show()).fold(gio::ListStore::new::<FDBKObject>(),|a,x|{
 			a.append(&FDBKObject::builder()
 				.txt(x.display_name())
 				.icon(&x.icon().unwrap_or_else(default_icon))
