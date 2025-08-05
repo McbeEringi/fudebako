@@ -42,10 +42,7 @@ mod fdbk_object{
 
 	use gtk4 as gtk;
 	use glib::Object;
-	use gtk::prelude::*;
 	use gtk::{glib,gio};
-
-	fn default_icon()->Option<gio::Icon>{Some(gio::ThemedIcon::new("application-x-executable").upcast())}
 
 	glib::wrapper!{pub struct FDBKObject(ObjectSubclass<imp::FDBKObject>);}
 	impl FDBKObject{
@@ -161,17 +158,27 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 	win.present();
 }
 
+fn default_icon()->gio::Icon{gio::ThemedIcon::new("application-x-executable").upcast()}
+
 fn on_activate(app:&gtk::Application){
 	// gtk::StringList::new(&vec!["apple", "banana", "cherry", "date"]).clone()
 	// (||->gtk::StringList{(0..=100_000).map(|number| number.to_string()).collect()})()
 	menu(
 		app,
-		(||->gio::ListStore{
-			let w=gio::ListStore::new::<FDBKObject>();
-			w.append(&FDBKObject::builder().txt("Hello").build());
-			w.append(&FDBKObject::builder().txt("ListView").build());
-			w
-		})()
+		// (||->gio::ListStore{
+		// 	let w=gio::ListStore::new::<FDBKObject>();
+		// 	w.append(&FDBKObject::builder().txt("Hello").build());
+		// 	w.append(&FDBKObject::builder().txt("ListView").build());
+		// 	w
+		// })()
+		gio::AppInfo::all().iter().fold(gio::ListStore::new::<FDBKObject>(),|a,x|{
+			a.append(&FDBKObject::builder()
+				.txt(x.display_name())
+				.icon(&x.icon().unwrap_or_else(default_icon))
+				.build()
+			);
+			a
+		})
 	);
 }
 
