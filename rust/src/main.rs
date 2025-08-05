@@ -2,52 +2,77 @@ use gtk4 as gtk;
 use gtk::prelude::*;
 use gtk::{glib,gio,gdk};
 use gtk4_layer_shell::{KeyboardMode,LayerShell};
+use fdbk_object::FDBKObject;
 // use num_traits::sign::signum;
 
 // https://github.com/gtk-rs/gtk4-rs/tree/main/book/listings/list_widgets/2/integer_object
-mod integer_object{
+mod fdbk_object{
 	mod imp{
 		use gtk4 as gtk;
-		use std::cell::Cell;
+		use std::cell::{Cell,RefCell};
 
 		use glib::Properties;
-		use gtk::glib;
+		use gtk::{glib,gio};
 		use gtk::prelude::*;
 		use gtk::subclass::prelude::*;
 
-		// ANCHOR: integer_object
 		// Object holding the state
 		#[derive(Properties,Default)]
-		#[properties(wrapper_type=super::IntegerObject)]
-		pub struct IntegerObject{
-				#[property(get,set)]
-				number:Cell<i32>,
+		#[properties(wrapper_type=super::FDBKObject)]
+		pub struct FDBKObject{
+			#[property(get,set)]
+			number:Cell<i32>,
+			#[property(get,set)]
+			txt:RefCell<String>,
+			#[property(get,set)]
+			icon:RefCell<Option<gio::Icon>>,
 		}
-		// ANCHOR_END: integer_object
 
 		// The central trait for subclassing a GObject
 		#[glib::object_subclass]
-		impl ObjectSubclass for IntegerObject{
-				const NAME:&'static str="MyGtkAppIntegerObject";
-				type Type=super::IntegerObject;
+		impl ObjectSubclass for FDBKObject{
+			const NAME:&'static str="FudebakoObject";
+			type Type=super::FDBKObject;
 		}
 
-		// ANCHOR: object_impl
 		// Trait shared by all GObjects
 		#[glib::derived_properties]
-		impl ObjectImpl for IntegerObject{}
+		impl ObjectImpl for FDBKObject{}
 	}
 
 	use gtk4 as gtk;
 	use glib::Object;
-	use gtk::glib;
+	use gtk::prelude::*;
+	use gtk::{glib,gio};
 
-	// ANCHOR: integer_object
-	glib::wrapper!{pub struct IntegerObject(ObjectSubclass<imp::IntegerObject>);}
-	impl IntegerObject{
-		pub fn new(number:i32)->Self{Object::builder().property("number", number).build()}
+	fn default_icon()->Option<gio::Icon>{Some(gio::ThemedIcon::new("application-x-executable").upcast())}
+
+	glib::wrapper!{pub struct FDBKObject(ObjectSubclass<imp::FDBKObject>);}
+	impl FDBKObject{
+		pub fn new(txt:&str)->Self{Object::builder().property("txt", txt).build()}
+		pub fn builder()->FDBKObjectBuilder{FDBKObjectBuilder::default()}
+	}
+
+	#[derive(Default)]
+	pub struct FDBKObjectBuilder{
+		number:Option<i32>,
+		txt:Option<String>,
+		icon:Option<gio::Icon>,
+	}
+	impl FDBKObjectBuilder{
+		pub fn number(mut self,x:i32)->Self{self.number=Some(x);self}
+		pub fn txt<S:Into<String>>(mut self,x:S)->Self{self.txt=Some(x.into());self}
+		pub fn icon(mut self,x:&gio::Icon)->Self{self.icon=Some(x.clone());self}
+		pub fn build(self)->FDBKObject{
+			let mut w=glib::Object::builder();
+			if let Some(x)=self.number {w=w.property("number",x);}
+			if let Some(x)=self.txt {w=w.property("txt",x);}
+			if let Some(x)=self.icon {w=w.property("icon",x);}
+			w.build()
+		}
 	}
 }
+
 
 
 
@@ -94,9 +119,15 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 				let img=hbox.first_child().and_downcast::<gtk::Image>().expect("Needs to be Image");
 				let pic=img.next_sibling().and_downcast::<gtk::Picture>().expect("Needs to be Picture");
 				let txt=pic.next_sibling().and_downcast::<gtk::Label>().expect("Needs to be Label");
-				let obj=li.item().and_downcast::<gtk::StringObject>().expect("Needs to be StringObject");
-				img.set_visible(false);
-				txt.set_text(&obj.string());
+				let obj=li.item().and_downcast::<FDBKObject>().expect("Needs to be StringObject");
+				if obj.icon().is_none() {
+					img.set_visible(false);
+				}else{
+					img.set_visible(true);
+					img.set_from_gicon(&obj.icon().unwrap());
+				}
+				// txt.set_text(&obj.number().to_string());
+				txt.set_text(&obj.txt());
 			});
 			factory
 		})())
@@ -136,7 +167,8 @@ fn on_activate(app:&gtk::Application){
 	menu(
 		app,
 		(||->gio::ListStore{
-			let w=gio::ListStore::new::<glib::BoxedAnyObject>();
+			let w=gio::ListStore::new::<FDBKObject>();
+			w.append(&FDBKObject::builder().txt("Hello").build());
 			w
 		})()
 	);
