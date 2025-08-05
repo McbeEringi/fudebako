@@ -120,6 +120,7 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 				let pic=img.next_sibling().and_downcast::<gtk::Picture>().expect("Needs to be Picture");
 				let txt=pic.next_sibling().and_downcast::<gtk::Label>().expect("Needs to be Label");
 				let obj=li.item().and_downcast::<FDBKObject>().expect("Needs to be StringObject");
+				pic.set_visible(false);
 				if obj.icon().is_none() {
 					img.set_visible(false);
 				}else{
