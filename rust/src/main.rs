@@ -74,8 +74,6 @@ mod fdbk_object{
 }
 
 
-
-
 fn menu(app:&gtk::Application,model:gio::ListStore){
 	let vbox=gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
 	let hbar=gtk::HeaderBar::new();
@@ -156,6 +154,7 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 	hbar.pack_start(&spn);
 	vbox.append(&sbar);
 	vbox.append(&scr);
+	ul.grab_focus();
 	win.add_controller(esc());
 	win.init_layer_shell();
 	win.set_keyboard_mode(KeyboardMode::Exclusive);
@@ -170,6 +169,7 @@ fn on_activate(app:&gtk::Application){
 		(||->gio::ListStore{
 			let w=gio::ListStore::new::<FDBKObject>();
 			w.append(&FDBKObject::builder().txt("Hello").build());
+			w.append(&FDBKObject::builder().txt("ListView").build());
 			w
 		})()
 	);
