@@ -99,15 +99,16 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 	let filter=gtk::CustomFilter::new(|_x|true);
 	let sorter=gtk::CustomSorter::new(|_a,_b|gtk::Ordering::Equal);
 	let ul=gtk::ListView::builder()
-		.model(&(
-			gtk::SingleSelection::new(Some(gtk::SortListModel::builder()
+		.model(&gtk::SingleSelection::builder()
+			.autoselect(true)
+			.model(&gtk::SortListModel::builder()
 				.incremental(true).sorter(&sorter)
 				.model(&gtk::FilterListModel::builder()
 					.incremental(true).filter(&filter)
 					.model(&model).build()
 				).build()
-			))
-		))
+			).build()
+		)
 		.factory(&(||{
 			let factory=gtk::SignalListItemFactory::new();
 			factory.connect_setup(move|_,x|{
@@ -142,22 +143,9 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 			});
 			factory
 		})())
-		// .max_children_per_line(1)
-		// .selection_mode(gtk::SelectionMode::Single)
 		.valign(gtk::Align::Start)
 		.build();
 	let scr=gtk::ScrolledWindow::builder().vexpand(true).child(&ul).build();
-	let esc=||{
-		let e=gtk::EventControllerKey::new();
-		e.connect_key_pressed(|_,key,_,_|{
-			match key{
-				gdk::Key::Escape=>std::process::exit(0),
-				_=>(),
-			}
-			glib::Propagation::Proceed
-		});
-		e
-	};
 
 	sbtn
 		.bind_property("active",&sbar,"search-mode-enabled")
@@ -167,44 +155,58 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 	vbox.append(&sbar);
 	vbox.append(&scr);
 	ul.grab_focus();
+	// ul.model().and_downcast_ref::<gtk::SingleSelection>().expect("model must be SingleSelection")
+	// 	.select_item(0,true);
 	ul.connect_activate(move|ul,i|{
 		let obj=ul
 			.model().and_downcast_ref::<gtk::SingleSelection>().expect("model must be SingleSelection")
-			.item(i).and_downcast::<fdbk_object::FDBKObject>().expect("item must be FDBKObject");
+			.item(i).and_downcast::<FDBKObject>().expect("item must be FDBKObject");
 		obj.activate();
 	});
-	win.add_controller(esc());
+	ul.add_controller((||{
+		let e=gtk::EventControllerKey::new();
+		e.connect_key_pressed(glib::clone!(#[strong]sinp,move|_,key,_,_|{
+			// println!("key value: {:?}", std::char::from_u32(key));
+			if let Some(x)=key.to_unicode(){
+				if !x.is_control() {sinp.grab_focus();}
+			}
+			glib::Propagation::Proceed
+		}));
+		e
+	})());
+	win.add_controller((||{
+		let e=gtk::EventControllerKey::new();
+		e.connect_key_pressed(|_,key,_,_|{
+			match key{
+				gdk::Key::Escape=>std::process::exit(0),
+				_=>(),
+			}
+			glib::Propagation::Proceed
+		});
+		e
+	})());
 	win.init_layer_shell();
 	win.set_keyboard_mode(KeyboardMode::Exclusive);
 	win.present();
 }
 
 fn default_icon()->gio::Icon{gio::ThemedIcon::new("application-x-executable").upcast()}
-
-fn on_activate(app:&gtk::Application){
-	// gtk::StringList::new(&vec!["apple", "banana", "cherry", "date"]).clone()
-	// (||->gtk::StringList{(0..=100_000).map(|number| number.to_string()).collect()})()
-	menu(
-		app,
-		// (||->gio::ListStore{
-		// 	let w=gio::ListStore::new::<FDBKObject>();
-		// 	w.append(&FDBKObject::builder().txt("Hello").build());
-		// 	w.append(&FDBKObject::builder().txt("ListView").build());
-		// 	w
-		// })()
-		gio::AppInfo::all().iter().filter(|x|x.should_show()).fold(gio::ListStore::new::<FDBKObject>(),|a,x|{
-			a.append(&FDBKObject::builder()
-				.txt(x.display_name())
-				.icon(&x.icon().unwrap_or_else(default_icon))
-				.on_activate(|x|{
-					println!("Activated! {:?}",x);
-				})
-				.build()
-			);
-			a
-		})
-	);
+fn dmenu()->gio::ListStore{
+	gio::AppInfo::all().into_iter().filter(|x|x.should_show()).fold(gio::ListStore::new::<FDBKObject>(),|a,x|{
+		a.append(&FDBKObject::builder()
+			.txt(x.display_name())
+			.icon(&x.icon().unwrap_or_else(default_icon))
+			.on_activate(move|_|{
+				x.launch(&[],Some(&gio::AppLaunchContext::new())).unwrap();
+				std::process::exit(0);
+			})
+			.build()
+		);
+		a
+	})
 }
+
+fn on_activate(app:&gtk::Application){menu(app,dmenu());}
 
 fn main(){
 	let app=gtk::Application::builder()
