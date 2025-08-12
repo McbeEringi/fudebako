@@ -15,6 +15,7 @@ mod fdbk_object{
 		use gtk::{glib,gio};
 		use gtk::prelude::*;
 		use gtk::subclass::prelude::*;
+		use std::sync::OnceLock;
 
 		// Object holding the state
 		#[derive(Properties,Default)]
@@ -37,16 +38,27 @@ mod fdbk_object{
 
 		// Trait shared by all GObjects
 		#[glib::derived_properties]
-		impl ObjectImpl for FDBKObject{}
+		impl ObjectImpl for FDBKObject{
+			fn signals()->&'static[glib::subclass::Signal]{
+				static SIGNALS: OnceLock<Vec<glib::subclass::Signal>>=OnceLock::new();
+				SIGNALS.get_or_init(||{
+					vec![glib::subclass::Signal::builder("activate")
+						// .param_types([])
+						.build()]
+				})
+			}
+		}
 	}
 
 	use gtk4 as gtk;
 	use gtk::{glib,gio};
+	use gtk::prelude::*;
 
 	glib::wrapper!{pub struct FDBKObject(ObjectSubclass<imp::FDBKObject>);}
 	impl FDBKObject{
 		pub fn new(txt:&str)->Self{glib::Object::builder().property("txt", txt).build()}
 		pub fn builder()->FDBKObjectBuilder{FDBKObjectBuilder::default()}
+		pub fn activate(&self){self.emit_by_name::<()>("activate",&[]);}
 	}
 
 	#[derive(Default)]
@@ -54,17 +66,21 @@ mod fdbk_object{
 		number:Option<i32>,
 		txt:Option<String>,
 		icon:Option<gio::Icon>,
+		on_activate:Option<Box<dyn Fn(&FDBKObject)+'static>>
 	}
 	impl FDBKObjectBuilder{
 		pub fn number(mut self,x:i32)->Self{self.number=Some(x);self}
 		pub fn txt<S:Into<String>>(mut self,x:S)->Self{self.txt=Some(x.into());self}
 		pub fn icon(mut self,x:&gio::Icon)->Self{self.icon=Some(x.clone());self}
+		pub fn on_activate<F:Fn(&FDBKObject)+'static>(mut self,x:F)->Self{self.on_activate=Some(Box::new(x));self}
 		pub fn build(self)->FDBKObject{
 			let mut w=glib::Object::builder();
 			if let Some(x)=self.number {w=w.property("number",x);}
 			if let Some(x)=self.txt {w=w.property("txt",x);}
 			if let Some(x)=self.icon {w=w.property("icon",x);}
-			w.build()
+			let w:FDBKObject=w.build();
+			if let Some(x)=self.on_activate {w.connect_closure("activate",false,glib::closure_local!(|y|x(y)));}
+			w
 		}
 	}
 }
@@ -113,7 +129,7 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 				let img=hbox.first_child().and_downcast::<gtk::Image>().expect("Needs to be Image");
 				let pic=img.next_sibling().and_downcast::<gtk::Picture>().expect("Needs to be Picture");
 				let txt=pic.next_sibling().and_downcast::<gtk::Label>().expect("Needs to be Label");
-				let obj=li.item().and_downcast::<FDBKObject>().expect("Needs to be StringObject");
+				let obj=li.item().and_downcast::<FDBKObject>().expect("Needs to be FDBKObject");
 				pic.set_visible(false);
 				if obj.icon().is_none() {
 					img.set_visible(false);
@@ -151,6 +167,12 @@ fn menu(app:&gtk::Application,model:gio::ListStore){
 	vbox.append(&sbar);
 	vbox.append(&scr);
 	ul.grab_focus();
+	ul.connect_activate(move|ul,i|{
+		let obj=ul
+			.model().and_downcast_ref::<gtk::SingleSelection>().expect("model must be SingleSelection")
+			.item(i).and_downcast::<fdbk_object::FDBKObject>().expect("item must be FDBKObject");
+		obj.activate();
+	});
 	win.add_controller(esc());
 	win.init_layer_shell();
 	win.set_keyboard_mode(KeyboardMode::Exclusive);
@@ -174,6 +196,9 @@ fn on_activate(app:&gtk::Application){
 			a.append(&FDBKObject::builder()
 				.txt(x.display_name())
 				.icon(&x.icon().unwrap_or_else(default_icon))
+				.on_activate(|x|{
+					println!("Activated! {:?}",x);
+				})
 				.build()
 			);
 			a
