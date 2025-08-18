@@ -205,6 +205,26 @@ fn dmenu()->gio::ListStore{
 		a
 	})
 }
+fn bench()->gio::ListStore{
+	// gtk::IconTheme::default().icon_names().iter().fold(gio::ListStore::new::<FDBKObject>(),|a,x|{
+	// 	a.append(&FDBKObject::builder()
+	// 		.txt(x.to_string())
+	// 		// .icon(&gtk::IconTheme::default().lookup_icon(
+	// 		// 	x,&[],32,32,gtk::TextDirection::None,gtk::IconLookupFlags::all()
+	// 		// ))
+	// 		.build()
+	// 	);
+	// 	a
+	// })
+	(0..100000).fold(gio::ListStore::new::<FDBKObject>(),|a,i:u32|{
+		a.append(&FDBKObject::builder()
+			.txt(i.to_string())
+			.icon(&default_icon())
+			.build()
+		);
+		a
+	})
+}
 
 fn on_activate(app:&gtk::Application){menu(app,dmenu());}
 
